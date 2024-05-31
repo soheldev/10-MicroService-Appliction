@@ -1,0 +1,175 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git changelog: false, poll: false, url: 'https://github.com/soheldev/10-MicroService-Appliction.git'
+            }
+        }
+
+        stage('adservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/adservice/') {
+                            sh "docker build -t soheldev/adservice:latest ."
+                            sh "docker push soheldev/adservice:latest"
+                            sh "docker rmi soheldev/adservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('cartservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/cartservice/src/') {
+                            sh "docker build -t soheldev/cartservice:latest ."
+                            sh "docker push soheldev/cartservice:latest"
+                            sh "docker rmi soheldev/cartservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('checkoutservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/checkoutservice/') {
+                            sh "docker build -t soheldev/checkoutservice:latest ."
+                            sh "docker push soheldev/checkoutservice:latest"
+                            sh "docker rmi soheldev/checkoutservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('currencyservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/currencyservice/') {
+                            sh "docker build -t soheldev/currencyservice:latest ."
+                            sh "docker push soheldev/currencyservice:latest"
+                            sh "docker rmi soheldev/currencyservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('emailservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/emailservice/') {
+                            sh "docker build -t soheldev/emailservice:latest ."
+                            sh "docker push soheldev/emailservice:latest"
+                            sh "docker rmi soheldev/emailservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('frontend') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/frontend/') {
+                            sh "docker build -t soheldev/frontend:latest ."
+                            sh "docker push soheldev/frontend:latest"
+                            sh "docker rmi soheldev/frontend:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('loadgenerator') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/loadgenerator/') {
+                            sh "docker build -t soheldev/loadgenerator:latest ."
+                            sh "docker push soheldev/loadgenerator:latest"
+                            sh "docker rmi soheldev/loadgenerator:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('paymentservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/paymentservice/') {
+                            sh "docker build -t soheldev/paymentservice:latest ."
+                            sh "docker push soheldev/paymentservice:latest"
+                            sh "docker rmi soheldev/paymentservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('productcatalogservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/productcatalogservice/') {
+                            sh "docker build -t soheldev/productcatalogservice:latest ."
+                            sh "docker push soheldev/productcatalogservice:latest"
+                            sh "docker rmi soheldev/productcatalogservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('recommendationservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/recommendationservice/') {
+                            sh "docker build -t soheldev/recommendationservice:latest ."
+                            sh "docker push soheldev/recommendationservice:latest"
+                            sh "docker rmi soheldev/recommendationservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('shippingservice') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker') {
+                        dir('/var/lib/jenkins/workspace/10-teir/src/shippingservice/') {
+                            sh "docker build -t soheldev/shippingservice:latest ."
+                            sh "docker push soheldev/shippingservice:latest"
+                            sh "docker rmi soheldev/shippingservice:latest"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('K8-Deploy') {
+            steps {
+                withKubeCredentials(kubectlCredentials: [[caCertificate: '', clusterName: 'my-app', contextName: '', credentialsId: 'k8-token', namespace: 'webapps', serverUrl: 'https://345D362D6BDA7B111951283351F0CE3E.gr7.ap-south-1.eks.amazonaws.com']]) {
+                    sh 'kubectl apply -f deployment-service.yml'
+                    sh 'kubectl get pods'
+                    sh 'kubectl get svc'
+                }
+            }
+        }
+    }
+}
