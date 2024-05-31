@@ -12,6 +12,8 @@ spec:
       labels:
         app: emailservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-1
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       securityContext:
@@ -78,6 +80,8 @@ spec:
       labels:
         app: checkoutservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-1
       serviceAccountName: default
       containers:
         - name: server
@@ -139,6 +143,8 @@ spec:
       labels:
         app: recommendationservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-1
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       containers:
@@ -197,6 +203,8 @@ spec:
       annotations:
         sidecar.istio.io/rewriteAppHTTPProbers: "true"
     spec:
+      nodeSelector:
+        nodegroup: node-group-1
       serviceAccountName: default
       containers:
         - name: server
@@ -236,16 +244,8 @@ spec:
             value: "checkoutservice:5050"
           - name: AD_SERVICE_ADDR
             value: "adservice:9555"
-          # # ENV_PLATFORM: One of: local, gcp, aws, azure, onprem, alibaba
-          # # When not set, defaults to "local" unless running in GKE, otherwies auto-sets to gcp
-          # - name: ENV_PLATFORM
-          #   value: "aws"
           - name: ENABLE_PROFILER
             value: "0"
-          # - name: CYMBAL_BRANDING
-          #   value: "true"
-          # - name: FRONTEND_MESSAGE
-          #   value: "Replace this with a message you want to display on all pages."
           resources:
             requests:
               cpu: 100m
@@ -293,6 +293,8 @@ spec:
       labels:
         app: paymentservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-1
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       containers:
@@ -335,6 +337,58 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: cartservice
+spec:
+  selector:
+    matchLabels:
+      app: cartservice
+  template:
+    metadata:
+      labels:
+        app: cartservice
+    spec:
+      nodeSelector:
+        nodegroup: node-group-2
+      serviceAccountName: default
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: server
+        image: adijaiswal/cartservice:latest
+        ports:
+        - containerPort: 7070
+        env:
+        - name: PORT
+          value: "7070"
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7070"]
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7070"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cartservice
+spec:
+  type: ClusterIP
+  selector:
+    app: cartservice
+  ports:
+  - name: grpc
+    port: 7070
+    targetPort: 7070
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: productcatalogservice
 spec:
   selector:
@@ -345,6 +399,8 @@ spec:
       labels:
         app: productcatalogservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-2
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       containers:
@@ -358,9 +414,11 @@ spec:
         - name: DISABLE_PROFILER
           value: "1"
         readinessProbe:
+          periodSeconds: 5
           exec:
             command: ["/bin/grpc_health_probe", "-addr=:3550"]
         livenessProbe:
+          periodSeconds: 5
           exec:
             command: ["/bin/grpc_health_probe", "-addr=:3550"]
         resources:
@@ -387,101 +445,6 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cartservice
-spec:
-  selector:
-    matchLabels:
-      app: cartservice
-  template:
-    metadata:
-      labels:
-        app: cartservice
-    spec:
-      serviceAccountName: default
-      terminationGracePeriodSeconds: 5
-      containers:
-      - name: server
-        image: adijaiswal/cartservice:latest
-        ports:
-        - containerPort: 7070
-        env:
-        - name: REDIS_ADDR
-          value: "redis-cart:6379"
-        resources:
-          requests:
-            cpu: 200m
-            memory: 64Mi
-          limits:
-            cpu: 300m
-            memory: 128Mi
-        readinessProbe:
-          initialDelaySeconds: 15
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7070", "-rpc-timeout=5s"]
-        livenessProbe:
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7070", "-rpc-timeout=5s"]
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cartservice
-spec:
-  type: ClusterIP
-  selector:
-    app: cartservice
-  ports:
-  - name: grpc
-    port: 7070
-    targetPort: 7070
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: loadgenerator
-spec:
-  selector:
-    matchLabels:
-      app: loadgenerator
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: loadgenerator
-      annotations:
-        sidecar.istio.io/rewriteAppHTTPProbers: "true"
-    spec:
-      serviceAccountName: default
-      terminationGracePeriodSeconds: 5
-      restartPolicy: Always
-      containers:
-      - name: main
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-              - ALL
-          privileged: false
-          readOnlyRootFilesystem: true
-        image: adijaiswal/loadgenerator:latest
-        env:
-        - name: FRONTEND_ADDR
-          value: "frontend:80"
-        - name: USERS
-          value: "10"
-        resources:
-          requests:
-            cpu: 300m
-            memory: 256Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: currencyservice
 spec:
   selector:
@@ -492,14 +455,15 @@ spec:
       labels:
         app: currencyservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-2
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       containers:
       - name: server
         image: adijaiswal/currencyservice:latest
         ports:
-        - name: grpc
-          containerPort: 7000
+        - containerPort: 7000
         env:
         - name: PORT
           value: "7000"
@@ -545,7 +509,10 @@ spec:
       labels:
         app: shippingservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-2
       serviceAccountName: default
+      terminationGracePeriodSeconds: 5
       containers:
       - name: server
         image: adijaiswal/shippingservice:latest
@@ -557,7 +524,6 @@ spec:
         - name: DISABLE_PROFILER
           value: "1"
         readinessProbe:
-          periodSeconds: 5
           exec:
             command: ["/bin/grpc_health_probe", "-addr=:50051"]
         livenessProbe:
@@ -587,59 +553,6 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis-cart
-spec:
-  selector:
-    matchLabels:
-      app: redis-cart
-  template:
-    metadata:
-      labels:
-        app: redis-cart
-    spec:
-      containers:
-      - name: redis
-        image: redis:alpine
-        ports:
-        - containerPort: 6379
-        readinessProbe:
-          periodSeconds: 5
-          tcpSocket:
-            port: 6379
-        livenessProbe:
-          periodSeconds: 5
-          tcpSocket:
-            port: 6379
-        volumeMounts:
-        - mountPath: /data
-          name: redis-data
-        resources:
-          limits:
-            memory: 256Mi
-            cpu: 125m
-          requests:
-            cpu: 70m
-            memory: 200Mi
-      volumes:
-      - name: redis-data
-        emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis-cart
-spec:
-  type: ClusterIP
-  selector:
-    app: redis-cart
-  ports:
-  - name: tcp-redis
-    port: 6379
-    targetPort: 6379
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: adservice
 spec:
   selector:
@@ -650,6 +563,8 @@ spec:
       labels:
         app: adservice
     spec:
+      nodeSelector:
+        nodegroup: node-group-2
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       containers:
@@ -660,23 +575,21 @@ spec:
         env:
         - name: PORT
           value: "9555"
-        resources:
-          requests:
-            cpu: 200m
-            memory: 180Mi
-          limits:
-            cpu: 300m
-            memory: 300Mi
+        - name: DISABLE_PROFILER
+          value: "1"
         readinessProbe:
-          initialDelaySeconds: 20
-          periodSeconds: 15
           exec:
             command: ["/bin/grpc_health_probe", "-addr=:9555"]
         livenessProbe:
-          initialDelaySeconds: 20
-          periodSeconds: 15
           exec:
             command: ["/bin/grpc_health_probe", "-addr=:9555"]
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
